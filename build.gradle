@@ -61,6 +61,8 @@ buildscript {
 
     versions.jgit = '4.4.1.201607150455-r'
 
+    versions.okhttp_digest = '2.3'
+
     ext.versions = versions
 
     repositories {

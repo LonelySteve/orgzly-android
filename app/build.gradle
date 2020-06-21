@@ -114,6 +114,8 @@ android {
 dependencies {
     implementation orgJavaLocation()
 
+    implementation "com.burgstaller:okhttp-digest:$versions.okhttp_digest"
+
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$versions.kotlin"
 
     implementation "org.jetbrains:annotations:$versions.jetbrains_annotations"

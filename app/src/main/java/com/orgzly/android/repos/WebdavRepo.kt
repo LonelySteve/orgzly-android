@@ -1,6 +1,11 @@
 package com.orgzly.android.repos
 
+import android.R.attr
 import android.net.Uri
+import com.burgstaller.okhttp.CachingAuthenticatorDecorator
+import com.burgstaller.okhttp.digest.CachingAuthenticator
+import com.burgstaller.okhttp.digest.Credentials
+import com.burgstaller.okhttp.digest.DigestAuthenticator
 import com.orgzly.android.BookName
 import com.orgzly.android.util.UriUtils
 import com.thegrizzlylabs.sardineandroid.DavResource
@@ -13,7 +18,10 @@ import java.io.InputStream
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
 import java.util.*
-import javax.net.ssl.*
+import java.util.concurrent.ConcurrentHashMap
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
 
 
 class WebdavRepo(
@@ -24,13 +32,11 @@ class WebdavRepo(
         certificates: String? = null
 ) : SyncRepo {
 
-    private val sardine = client(certificates).apply {
-        setCredentials(username, password)
-    }
+    private val sardine = client(username, password, certificates)
 
-    private fun client(certificates: String?): OkHttpSardine {
+    private fun client(username: String, password: String, certificates: String?): OkHttpSardine {
         return if (certificates.isNullOrEmpty()) {
-            OkHttpSardine()
+            OkHttpSardine(okHttpClientWithDigestAuthentication(username, password))
         } else {
             OkHttpSardine(okHttpClientWithTrustedCertificates(certificates))
         }
@@ -48,6 +54,15 @@ class WebdavRepo(
         return OkHttpClient.Builder()
                 .sslSocketFactory(sslSocketFactory, trustManager)
                 .build()
+    }
+    
+    // see https://github.com/thegrizzlylabs/sardine-android/issues/17
+    private fun okHttpClientWithDigestAuthentication(username: String, password: String):OkHttpClient{
+        val builder = OkHttpClient.Builder()
+        val authCache: Map<String, CachingAuthenticator> = ConcurrentHashMap()
+        val authenticator = DigestAuthenticator(Credentials(username, password))
+        builder.authenticator(CachingAuthenticatorDecorator(authenticator, authCache))
+        return builder.build()
     }
 
     private fun trustManagerForCertificates(str: String): X509TrustManager {
